@@ -1043,7 +1043,7 @@
             <input
               id="schedule-search-input"
               type="text"
-              placeholder="使用正则搜索赛程、学校、战队或赛区，例如 清华|上交"
+              placeholder="使用正则搜索赛程、学校、战队或赛区"
             />
           </div>
           <div id="schedule-search-status" class="tool-status"></div>
@@ -1085,7 +1085,7 @@
         <div class="school-board">
           <div class="school-list">
             <div class="school-search">
-              <input id="school-search-input" type="text" placeholder="使用正则搜索学校、战队或赛区，例如 华东|华南" />
+              <input id="school-search-input" type="text" placeholder="使用正则搜索学校、战队或赛区" />
               <div id="school-search-status" class="school-search-status"></div>
             </div>
             <div id="school-list" class="school-list-items"></div>
@@ -1100,6 +1100,7 @@
 
     <script>
       const STATIC_BOOTSTRAP = window.__RM_OBSERVER_STATIC__ || null;
+      const IS_GITHUB_PAGES_HOST = /\.github\.io$/i.test(window.location.hostname);
       const LIVE_DATA_API = "/api/live-data";
 
       const SCHEDULE_STATUS = {
@@ -2721,6 +2722,13 @@
           state.healthText = "GitHub Pages 静态快照";
           state.healthTone = "success";
           renderAll();
+          return;
+        }
+
+        if (IS_GITHUB_PAGES_HOST && !STATIC_BOOTSTRAP) {
+          state.healthText = "GitHub Pages 404：当前页面很可能还在提供仓库源码，而不是 Actions 构建后的静态站点。请到 Settings > Pages 将 Source 设置为 GitHub Actions。";
+          state.healthTone = "danger";
+          renderMeta();
           return;
         }
 
