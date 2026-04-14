@@ -20,6 +20,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_PAGES_PAT: ${{ secrets.PAGES_PAT != '' && 'true' || 'false' }}
 
     steps:
       - name: Checkout
@@ -33,7 +35,15 @@ jobs:
       - name: Build Static Site
         run: python build_pages.py
 
+      - name: Configure Pages With Auto Enable
+        if: ${{ env.HAS_PAGES_PAT == 'true' }}
+        uses: actions/configure-pages@v5
+        with:
+          token: ${{ secrets.PAGES_PAT }}
+          enablement: true
+
       - name: Configure Pages
+        if: ${{ env.HAS_PAGES_PAT != 'true' }}
         uses: actions/configure-pages@v5
 
       - name: Upload Pages Artifact
