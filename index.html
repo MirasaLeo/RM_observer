@@ -1,0 +1,2894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoboMaster Live Observer</title>
+    <style>
+      :root {
+        --bg: #07121d;
+        --bg-soft: #0f2232;
+        --panel: rgba(10, 24, 36, 0.84);
+        --panel-strong: rgba(14, 32, 46, 0.96);
+        --line: rgba(137, 186, 220, 0.18);
+        --text: #edf7ff;
+        --muted: #9cb6c7;
+        --accent: #2fc0ff;
+        --accent-strong: #0098ff;
+        --warning: #ffd56a;
+        --success: #51df8a;
+        --danger: #ff6d78;
+        --shadow: 0 18px 60px rgba(0, 0, 0, 0.32);
+        --radius: 22px;
+        --radius-sm: 14px;
+        --font-sans:
+          "IBM Plex Sans SC", "Noto Sans SC", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top left, rgba(0, 152, 255, 0.2), transparent 32%),
+          radial-gradient(circle at top right, rgba(47, 192, 255, 0.16), transparent 26%),
+          linear-gradient(180deg, #091521 0%, #07111a 100%);
+        color: var(--text);
+        font-family: var(--font-sans);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 28px 28px;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 92%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1400px, calc(100% - 32px));
+        margin: 28px auto 52px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background:
+          linear-gradient(140deg, rgba(13, 34, 50, 0.94), rgba(6, 18, 28, 0.9)),
+          linear-gradient(90deg, rgba(47, 192, 255, 0.1), transparent);
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -140px;
+        top: -120px;
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(47, 192, 255, 0.22), transparent 70%);
+        filter: blur(8px);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border: 1px solid rgba(47, 192, 255, 0.24);
+        border-radius: 999px;
+        color: var(--warning);
+        background: rgba(8, 19, 30, 0.52);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero h1 {
+        margin: 18px 0 12px;
+        font-size: clamp(32px, 5vw, 54px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+      }
+
+      .hero p {
+        max-width: 880px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.72;
+        font-size: 15px;
+      }
+
+      .source-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .source-pill {
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(137, 186, 220, 0.15);
+        background: rgba(255, 255, 255, 0.04);
+        color: #c7e8ff;
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      .status-bar {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .metric-card {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .metric-card .label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .metric-card .value {
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .controls,
+      .section {
+        margin-top: 18px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .panel-selector {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .panel-selector p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .panel-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .panel-btn {
+        min-height: 46px;
+        padding: 0 18px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .panel-btn.active {
+        border-color: rgba(47, 192, 255, 0.3);
+        background: rgba(47, 192, 255, 0.12);
+        color: var(--text);
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .field select,
+      .field button {
+        min-height: 46px;
+        padding: 0 14px;
+        border: 1px solid rgba(137, 186, 220, 0.16);
+        border-radius: 14px;
+        background: var(--panel-strong);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .field button {
+        cursor: pointer;
+        background:
+          linear-gradient(135deg, rgba(47, 192, 255, 0.18), rgba(0, 152, 255, 0.08)),
+          var(--panel-strong);
+      }
+
+      .field button:hover {
+        border-color: rgba(47, 192, 255, 0.4);
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .section-title {
+        margin: 0;
+        font-size: 24px;
+      }
+
+      .section-desc {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .section-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #cde9ff;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .section-tools {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .inline-search input {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid rgba(137, 186, 220, 0.16);
+        border-radius: 14px;
+        background: var(--panel-strong);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .tool-status {
+        min-height: 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .tool-status.danger {
+        color: var(--danger);
+      }
+
+      .filter-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .filter-btn {
+        padding: 10px 14px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .filter-btn.active {
+        border-color: rgba(47, 192, 255, 0.3);
+        background: rgba(47, 192, 255, 0.12);
+        color: var(--text);
+      }
+
+      .empty {
+        padding: 30px 22px;
+        border: 1px dashed rgba(137, 186, 220, 0.2);
+        border-radius: 18px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .data-panel {
+        display: none;
+      }
+
+      .data-panel.active {
+        display: block;
+      }
+
+      .schedule-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .match-card {
+        padding: 18px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 20px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+          var(--panel-strong);
+      }
+
+      .match-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .match-top h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .match-top p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .status-chip {
+        align-self: flex-start;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status-chip.waiting {
+        background: rgba(255, 213, 106, 0.12);
+        color: var(--warning);
+      }
+
+      .status-chip.live {
+        background: rgba(47, 192, 255, 0.14);
+        color: var(--accent);
+      }
+
+      .status-chip.done {
+        background: rgba(81, 223, 138, 0.12);
+        color: var(--success);
+      }
+
+      .status-chip.pending,
+      .status-chip.other {
+        background: rgba(255, 109, 120, 0.12);
+        color: var(--danger);
+      }
+
+      .teams {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .team-box {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(137, 186, 220, 0.1);
+        background: rgba(255, 255, 255, 0.03);
+        min-width: 0;
+      }
+
+      .team-box.red {
+        box-shadow: inset 0 0 0 1px rgba(255, 109, 120, 0.12);
+      }
+
+      .team-box.blue {
+        box-shadow: inset 0 0 0 1px rgba(47, 192, 255, 0.12);
+      }
+
+      .team-box img {
+        width: 52px;
+        height: 52px;
+        object-fit: cover;
+        border-radius: 50%;
+        background: #fff;
+        flex-shrink: 0;
+      }
+
+      .team-meta {
+        min-width: 0;
+      }
+
+      .team-meta .school {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .team-meta .team {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .score-box {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-width: 92px;
+        padding: 10px 0;
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(47, 192, 255, 0.06), rgba(0, 0, 0, 0.08));
+      }
+
+      .score-box .score {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+
+      .score-box .time {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .group-list {
+        display: grid;
+        gap: 16px;
+      }
+
+      .group-card {
+        padding: 16px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .group-card h3 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: 16px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 820px;
+      }
+
+      thead th {
+        padding: 14px 12px;
+        border-bottom: 1px solid rgba(137, 186, 220, 0.16);
+        color: #cce8ff;
+        text-align: left;
+        font-size: 13px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      tbody td {
+        padding: 14px 12px;
+        border-bottom: 1px solid rgba(137, 186, 220, 0.08);
+        vertical-align: middle;
+        font-size: 14px;
+      }
+
+      tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: rgba(47, 192, 255, 0.12);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .team-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 220px;
+      }
+
+      .team-cell img {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #fff;
+        flex-shrink: 0;
+      }
+
+      .team-cell .school {
+        display: block;
+        font-weight: 700;
+      }
+
+      .team-cell .team {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .robot-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .tab-btn {
+        padding: 10px 14px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .tab-btn.active {
+        border-color: rgba(47, 192, 255, 0.3);
+        background: rgba(47, 192, 255, 0.12);
+        color: var(--text);
+      }
+
+      .robot-note {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .school-board {
+        display: grid;
+        grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .school-list {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .school-list-items {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .school-search {
+        display: grid;
+        gap: 10px;
+      }
+
+      .school-search input {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid rgba(137, 186, 220, 0.16);
+        border-radius: 14px;
+        background: var(--panel-strong);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .school-search-status {
+        min-height: 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .school-search-status.danger {
+        color: var(--danger);
+      }
+
+      .school-entry {
+        width: 100%;
+        padding: 14px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .school-entry.active {
+        border-color: rgba(47, 192, 255, 0.3);
+        background: rgba(47, 192, 255, 0.1);
+      }
+
+      .school-entry-top {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .school-entry-top img,
+      .school-detail-head img {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #fff;
+        flex-shrink: 0;
+      }
+
+      .school-entry strong,
+      .school-detail-head strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .school-entry span,
+      .school-detail-head span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .school-entry-zones {
+        margin-top: 12px;
+        color: #cde9ff;
+        font-size: 12px;
+      }
+
+      .school-detail {
+        min-height: 320px;
+        padding: 18px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .school-detail-head {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .school-detail-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .school-meta-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #cde9ff;
+        font-size: 12px;
+      }
+
+      .school-slot-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .school-slot-card {
+        padding: 16px;
+        border: 1px solid rgba(137, 186, 220, 0.12);
+        border-radius: 18px;
+        background: rgba(8, 19, 30, 0.42);
+      }
+
+      .school-slot-title {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .school-slot-title strong {
+        font-size: 15px;
+      }
+
+      .school-slot-status {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .school-slot-summary {
+        margin-top: 10px;
+        color: #cde9ff;
+        line-height: 1.6;
+        font-size: 13px;
+      }
+
+      .school-slot-field {
+        margin-top: 12px;
+      }
+
+      .school-slot-field label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .school-slot-field input {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid rgba(137, 186, 220, 0.16);
+        border-radius: 14px;
+        background: var(--panel-strong);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .school-slot-field textarea {
+        width: 100%;
+        min-height: 110px;
+        padding: 12px 14px;
+        border: 1px solid rgba(137, 186, 220, 0.16);
+        border-radius: 14px;
+        background: var(--panel-strong);
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+
+      .school-note-images {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .school-image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+        gap: 10px;
+      }
+
+      .school-image-card {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 1;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .school-image-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .school-image-remove {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        min-width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(7, 18, 29, 0.88);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .school-image-empty {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .school-image-picker {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        width: fit-content;
+        padding: 0 14px;
+        border: 1px dashed rgba(137, 186, 220, 0.28);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        color: #cde9ff;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      .school-image-picker input {
+        display: none;
+      }
+
+      .school-image-hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .school-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .school-actions button {
+        min-height: 44px;
+        padding: 0 18px;
+        border: 1px solid rgba(137, 186, 220, 0.16);
+        border-radius: 14px;
+        background:
+          linear-gradient(135deg, rgba(47, 192, 255, 0.18), rgba(0, 152, 255, 0.08)),
+          var(--panel-strong);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .school-save-status {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .school-save-status.success {
+        color: var(--success);
+      }
+
+      .school-save-status.danger {
+        color: var(--danger);
+      }
+
+      .footer-note {
+        margin-top: 18px;
+        padding: 18px 20px;
+        border: 1px solid rgba(137, 186, 220, 0.14);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 14px;
+      }
+
+      @media (max-width: 1080px) {
+        .status-bar,
+        .controls,
+        .schedule-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .school-board {
+          grid-template-columns: 1fr;
+        }
+
+        .panel-selector {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .section-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: min(100% - 20px, 1400px);
+          margin-top: 14px;
+        }
+
+        .hero,
+        .controls,
+        .section {
+          padding: 18px;
+          border-radius: 20px;
+        }
+
+        .teams {
+          grid-template-columns: 1fr;
+        }
+
+        .score-box {
+          min-width: 0;
+          flex-direction: row;
+          gap: 12px;
+          justify-content: space-between;
+          padding: 12px 14px;
+        }
+
+        .score-box .time {
+          margin-top: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="eyebrow">RoboMaster Live Observer</div>
+        <center><h1>工作台</h1></center>
+        <div class="status-bar">
+          <div class="metric-card">
+            <span class="label">抓取策略</span>
+            <span class="value">官方 JSON 直连</span>
+          </div>
+          <div class="metric-card">
+            <span class="label">当前状态</span>
+            <span class="value" id="health-value">等待首次拉取</span>
+          </div>
+          <div class="metric-card">
+            <span class="label">最后成功时间</span>
+            <span class="value" id="updated-at">-</span>
+          </div>
+          <div class="metric-card">
+            <span class="label">赛区数量</span>
+            <span class="value" id="zone-count">-</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="field">
+          <label for="zone-select">赛区筛选</label>
+          <select id="zone-select">
+            <option value="">全部赛区</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="refresh-select">自动刷新</label>
+          <select id="refresh-select">
+            <option value="15000">15 秒</option>
+            <option value="30000">30 秒</option>
+            <option value="60000">60 秒</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="timezone-select">时间显示</label>
+          <select id="timezone-select">
+            <option value="Asia/Shanghai">Asia/Shanghai</option>
+            <option value="UTC">UTC</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>手动操作</label>
+          <button id="refresh-button" type="button">立即刷新</button>
+        </div>
+      </section>
+
+      <section class="section panel-selector">
+          <div class="panel-tabs" id="panel-tabs">
+            <button class="panel-btn active" type="button" data-panel="schedule">赛程表</button>
+            <button class="panel-btn" type="button" data-panel="ranking">战队积分榜</button>
+            <button class="panel-btn" type="button" data-panel="robot">机器人关键数据</button>
+            <button class="panel-btn" type="button" data-panel="school">学校看板</button>
+          </div>
+      </section>
+
+      <section class="section data-panel active" data-panel-content="schedule">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">赛程表</h2>
+          </div>
+          <div class="section-tag" id="schedule-meta">0 场</div>
+        </div>
+        <div class="section-tools">
+          <div class="inline-search">
+            <input
+              id="schedule-search-input"
+              type="text"
+              placeholder="使用正则搜索赛程、学校、战队或赛区，例如 清华|上交"
+            />
+          </div>
+          <div id="schedule-search-status" class="tool-status"></div>
+        </div>
+        <div id="schedule-root" class="schedule-grid"></div>
+      </section>
+
+      <section class="section data-panel" data-panel-content="ranking">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">战队积分榜</h2>
+          </div>
+          <div class="section-tag" id="ranking-meta">0 个分组</div>
+        </div>
+        <div class="section-tools">
+          <div id="ranking-group-toolbar" class="filter-toolbar"></div>
+        </div>
+        <div id="ranking-root" class="group-list"></div>
+      </section>
+
+      <section class="section data-panel" data-panel-content="robot">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">机器人关键数据</h2>
+          </div>
+          <div class="section-tag" id="robot-meta">0 支战队</div>
+        </div>
+        <div id="robot-toolbar" class="robot-toolbar"></div>
+        <div id="robot-root"></div>
+      </section>
+
+      <section class="section data-panel" data-panel-content="school">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">学校看板</h2>
+          </div>
+          <div class="section-tag" id="school-meta">0 所学校</div>
+        </div>
+        <div class="school-board">
+          <div class="school-list">
+            <div class="school-search">
+              <input id="school-search-input" type="text" placeholder="使用正则搜索学校、战队或赛区，例如 华东|华南" />
+              <div id="school-search-status" class="school-search-status"></div>
+            </div>
+            <div id="school-list" class="school-list-items"></div>
+          </div>
+          <div id="school-detail" class="school-detail">
+            <div class="empty">当前还没有学校数据。</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <script>
+      const STATIC_BOOTSTRAP = window.__RM_OBSERVER_STATIC__ || null;
+      const LIVE_DATA_API = "/api/live-data";
+
+      const SCHEDULE_STATUS = {
+        WAITING: { label: "未开始", className: "waiting" },
+        STARTED: { label: "直播中", className: "live" },
+        DONE: { label: "已结束", className: "done" },
+        PENDING: { label: "结果待定", className: "pending" }
+      };
+
+      const ROBOT_CONFIG = {
+        Infantry: {
+          label: "步兵",
+          sortKey: "eaSmallHitRate",
+          sortDirection: "desc",
+          columns: [
+            { key: "eaSmallHitRate", label: "局均17mm弹丸命中率（%）", percent: true },
+            { key: "eagHurt", label: "局均总伤害" },
+            { key: "matchLargeEnergyActRoundsAvg", label: "大能量机关平均激活环数" }
+          ]
+        },
+        Hero: {
+          label: "英雄",
+          sortKey: "eaBigHitRate",
+          sortDirection: "desc",
+          columns: [
+            { key: "eaBigHitRate", label: "局均42mm弹丸命中率（%）", percent: true },
+            { key: "gkDamage", label: "局均关键伤害" },
+            { key: "eaSnipeCnt", label: "局均部署命中数" }
+          ]
+        },
+        Sapper: {
+          label: "工程",
+          sortKey: "eaExchangeEcon",
+          sortDirection: "desc",
+          columns: [
+            { key: "eaExchangeEcon", label: "局均兑换经济" },
+            { key: "avgMineTime", label: "平均兑矿时间（s）", zeroLast: true, sortDirection: "asc" },
+            { key: "avgMineDiff", label: "平均兑矿难度" }
+          ]
+        },
+        Guard: {
+          label: "哨兵",
+          sortKey: "eaSmallHitRate",
+          sortDirection: "desc",
+          columns: [
+            { key: "eaSmallHitRate", label: "局均17mm弹丸命中率（%）", percent: true },
+            { key: "eagHurt", label: "局均总伤害" }
+          ]
+        },
+        Airplane: {
+          label: "无人机",
+          sortKey: "eaSmallHitRate",
+          sortDirection: "desc",
+          columns: [
+            { key: "eaSmallHitRate", label: "局均17mm弹丸命中率（%）", percent: true },
+            { key: "eagHurt", label: "局均总伤害" },
+            { key: "gKillCount", label: "局均击杀数" },
+            { key: "avgShootNum", label: "局均发弹量" }
+          ]
+        },
+        Dart: {
+          label: "飞镖",
+          sortKey: "etDartRDMoveCnt",
+          sortDirection: "desc",
+          columns: [
+            { key: "etDartRDMoveCnt", label: "累计命中基地随机移动目标数" },
+            { key: "etDartRDFixCnt", label: "累计命中基地随机固定目标数" },
+            { key: "etDartFixedCnt", label: "累计命中基地固定目标数" },
+            { key: "etDartOutpostCnt", label: "累计命中前哨站数" }
+          ]
+        },
+        Radar: {
+          label: "雷达",
+          sortKey: "eaRadarMarkerTime",
+          sortDirection: "desc",
+          columns: [
+            { key: "eaRadarMarkerTime", label: "局均易伤时间（s）" },
+            { key: "eaRadarDebuffDmg", label: "局均额外伤害" }
+          ]
+        }
+      };
+
+      const defaultLogo = "https://rm-static.djicdn.com/robomasters/public/school.png";
+      const LOGO_PROXY_API = "/api/logo?url=";
+      const SCHOOL_NOTES_API = "/api/school-notes";
+      const NOTE_IMAGE_UPLOAD_API = "/api/upload-note-image";
+      const BROWSER_NOTES_STORAGE_KEY = "rm_observer_browser_notes_v1";
+      const BROWSER_IMAGES_STORAGE_KEY = "rm_observer_browser_images_v1";
+      const BROWSER_IDB_NAME = "rm_observer_browser_assets";
+      const BROWSER_IDB_STORE = "note_images";
+      const SCHOOL_AUTO_SAVE_MS = 2000;
+      const SCHOOL_SUMMARY_NOTE = { id: "overall-analysis", label: "总体分析" };
+      const SCHOOL_ROBOT_SLOTS = [
+        { id: "hero-1", label: "1号英雄", type: "Hero", robotNumber: 1 },
+        { id: "sapper-2", label: "2号工程", type: "Sapper", robotNumber: 2 },
+        { id: "infantry-3", label: "3号步兵", type: "Infantry", robotNumber: 3 },
+        { id: "infantry-4", label: "4号步兵", type: "Infantry", robotNumber: 4 },
+        { id: "airplane-6", label: "6号无人机", type: "Airplane", robotNumber: 6 },
+        { id: "guard-7", label: "7号哨兵", type: "Guard", robotNumber: 7 },
+        { id: "dart", label: "飞镖", type: "Dart" }
+      ];
+
+      const state = {
+        zoneId: "",
+        timezone: "Asia/Shanghai",
+        refreshMs: 15000,
+        activePanel: "schedule",
+        activeSchoolKey: "",
+        robotType: "Infantry",
+        staticMode: Boolean(STATIC_BOOTSTRAP),
+        timer: null,
+        autoSaveTimer: null,
+        scheduleSearchPattern: "",
+        scheduleSearchError: "",
+        schoolSearchPattern: "",
+        schoolSearchError: "",
+        rankingGroupFilter: "",
+        lastUpdatedAt: "",
+        healthText: "等待首次拉取",
+        healthTone: "muted",
+        dirtySchoolKeys: new Set(),
+        savingSchoolKeys: new Set(),
+        schoolNotes: {},
+        schoolImages: {},
+        browserImageDataUrls: {},
+        uploadingSlotKeys: new Set(),
+        schoolSaveByKey: {},
+        schoolApiStatus: {
+          text: "等待连接本地 Python 保存服务。",
+          tone: "muted"
+        },
+        payloads: {
+          schedule: null,
+          ranking: null,
+          robot: null
+        }
+      };
+
+      const refs = {
+        zoneSelect: document.querySelector("#zone-select"),
+        refreshSelect: document.querySelector("#refresh-select"),
+        timezoneSelect: document.querySelector("#timezone-select"),
+        refreshButton: document.querySelector("#refresh-button"),
+        panelTabs: document.querySelector("#panel-tabs"),
+        updatedAt: document.querySelector("#updated-at"),
+        healthValue: document.querySelector("#health-value"),
+        zoneCount: document.querySelector("#zone-count"),
+        scheduleMeta: document.querySelector("#schedule-meta"),
+        rankingMeta: document.querySelector("#ranking-meta"),
+        robotMeta: document.querySelector("#robot-meta"),
+        schoolMeta: document.querySelector("#school-meta"),
+        scheduleSearchInput: document.querySelector("#schedule-search-input"),
+        scheduleSearchStatus: document.querySelector("#schedule-search-status"),
+        rankingGroupToolbar: document.querySelector("#ranking-group-toolbar"),
+        scheduleRoot: document.querySelector("#schedule-root"),
+        rankingRoot: document.querySelector("#ranking-root"),
+        robotToolbar: document.querySelector("#robot-toolbar"),
+        robotRoot: document.querySelector("#robot-root"),
+        schoolSearchInput: document.querySelector("#school-search-input"),
+        schoolSearchStatus: document.querySelector("#school-search-status"),
+        schoolList: document.querySelector("#school-list"),
+        schoolDetail: document.querySelector("#school-detail"),
+        panelContents: document.querySelectorAll("[data-panel-content]")
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatDateTime(iso) {
+        if (!iso) {
+          return "-";
+        }
+        return new Intl.DateTimeFormat("zh-CN", {
+          timeZone: state.timezone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false
+        }).format(new Date(iso));
+      }
+
+      function formatShortTime(iso) {
+        if (!iso) {
+          return "-";
+        }
+        return new Intl.DateTimeFormat("zh-CN", {
+          timeZone: state.timezone,
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        }).format(new Date(iso));
+      }
+
+      function formatNumber(value, options = {}) {
+        if (value === null || value === undefined || value === "") {
+          return "-";
+        }
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+          return escapeHtml(value);
+        }
+
+        let digits = 0;
+        if (options.percent) {
+          digits = numeric % 1 === 0 ? 0 : 1;
+          return numeric.toFixed(digits) + "%";
+        }
+
+        digits = Number.isInteger(numeric) ? 0 : 1;
+        return new Intl.NumberFormat("zh-CN", {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        }).format(numeric);
+      }
+
+      function getZoneOptions() {
+        const zones = new Map();
+
+        const scheduleZones =
+          (((state.payloads.schedule || {}).data || {}).event || {}).zones || {};
+        for (const zone of scheduleZones.nodes || []) {
+          zones.set(zone.id, zone.name);
+        }
+
+        for (const zone of (state.payloads.ranking || {}).zones || []) {
+          zones.set(zone.zoneId, zone.zoneName);
+        }
+
+        for (const zone of (state.payloads.robot || {}).zones || []) {
+          zones.set(zone.zoneId, zone.zoneName);
+        }
+
+        return [...zones.entries()].map(([id, name]) => ({ id, name }));
+      }
+
+      function rebuildZoneSelect() {
+        const options = getZoneOptions();
+        refs.zoneSelect.innerHTML = [
+          '<option value="">全部赛区</option>',
+          ...options.map(
+            (zone) =>
+              `<option value="${escapeHtml(zone.id)}"${zone.id === state.zoneId ? " selected" : ""}>${escapeHtml(zone.name)}</option>`
+          )
+        ].join("");
+        refs.zoneCount.textContent = String(options.length);
+      }
+
+      function renderActivePanel() {
+        refs.panelTabs.querySelectorAll("[data-panel]").forEach((button) => {
+          const isActive = button.dataset.panel === state.activePanel;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+
+        refs.panelContents.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.panelContent === state.activePanel);
+        });
+      }
+
+      function normalizeSchoolIdentity(value) {
+        return String(value ?? "")
+          .trim()
+          .replace(/\s+/g, " ")
+          .toLowerCase();
+      }
+
+      function buildSchoolKey(info) {
+        const collegeName = normalizeSchoolIdentity(info.collegeName);
+        const teamName = normalizeSchoolIdentity(info.teamName || info.name);
+        const rawId = normalizeSchoolIdentity(info.teamId || info.id);
+        if (collegeName) {
+          return collegeName;
+        }
+        if (teamName) {
+          return teamName;
+        }
+        return rawId || "unknown-school";
+      }
+
+      function makeSafeDomId(value) {
+        return String(value ?? "")
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]+/g, "-");
+      }
+
+      function resolveRemoteUrl(url) {
+        const target = String(url || defaultLogo).trim() || defaultLogo;
+        if (target.startsWith("//")) {
+          return "https:" + target;
+        }
+        if (target.startsWith("/")) {
+          try {
+            return new URL(target, defaultLogo).href;
+          } catch {
+            return defaultLogo;
+          }
+        }
+        return target;
+      }
+
+      function resolveAssetUrl(path) {
+        const target = String(path || "").trim();
+        if (!target) {
+          return "";
+        }
+        if (/^(?:[a-z]+:)?\/\//i.test(target) || target.startsWith("data:")) {
+          return target;
+        }
+        const normalized = target.startsWith("/") ? target.slice(1) : target;
+        return new URL(normalized, document.baseURI).href;
+      }
+
+      function resolveLogoUrl(url) {
+        const target = resolveRemoteUrl(url);
+        if (state.staticMode) {
+          return target;
+        }
+        return `${LOGO_PROXY_API}${encodeURIComponent(target)}`;
+      }
+
+      function renderLogoImg(url, alt = "", options = {}) {
+        const loading = options.loading || "lazy";
+        const fallbackUrl = resolveLogoUrl(defaultLogo);
+        return `
+          <img
+            src="${escapeHtml(resolveLogoUrl(url))}"
+            alt="${escapeHtml(alt)}"
+            loading="${escapeHtml(loading)}"
+            decoding="async"
+            referrerpolicy="no-referrer"
+            onerror="this.onerror=null;this.src='${escapeHtml(fallbackUrl)}';"
+          />
+        `;
+      }
+
+      function upsertSchool(map, info, zoneInfo = {}, robots = []) {
+        const key = buildSchoolKey(info);
+        let school = map.get(key);
+
+        if (!school) {
+          school = {
+            key,
+            collegeName: info.collegeName || "未知学校",
+            teamName: info.teamName || info.name || "-",
+            collegeLogo: info.collegeLogo || defaultLogo,
+            teamId: info.teamId || info.id || "",
+            zoneIds: new Set(),
+            zoneNames: new Set(),
+            robots: []
+          };
+          map.set(key, school);
+        }
+
+        if (school.collegeName === "未知学校" && info.collegeName) {
+          school.collegeName = info.collegeName;
+        }
+        if (school.teamName === "-" && (info.teamName || info.name)) {
+          school.teamName = info.teamName || info.name;
+        }
+        if ((!school.collegeLogo || school.collegeLogo === defaultLogo) && info.collegeLogo) {
+          school.collegeLogo = info.collegeLogo;
+        }
+        school.teamId = school.teamId || info.teamId || info.id || "";
+
+        if (zoneInfo.id !== null && zoneInfo.id !== undefined && zoneInfo.id !== "") {
+          school.zoneIds.add(String(zoneInfo.id));
+        }
+        if (zoneInfo.name) {
+          school.zoneNames.add(zoneInfo.name);
+        }
+
+        for (const robot of robots || []) {
+          school.robots.push({ ...robot });
+        }
+
+        return school;
+      }
+
+      function dedupeSchoolRobots(robots) {
+        const seen = new Set();
+        const deduped = [];
+
+        for (const robot of robots || []) {
+          const key = [robot.id ?? "", robot.type ?? "", robot.robotNumber ?? ""].join("__");
+          if (seen.has(key)) {
+            continue;
+          }
+          seen.add(key);
+          deduped.push(robot);
+        }
+
+        return deduped;
+      }
+
+      function normalizeSchools() {
+        const schools = new Map();
+        const scheduleZones = ((((state.payloads.schedule || {}).data || {}).event || {}).zones || {}).nodes || [];
+
+        for (const zone of scheduleZones) {
+          if (state.zoneId && zone.id !== state.zoneId) {
+            continue;
+          }
+
+          const matches = [
+            ...((zone.groupMatches || {}).nodes || []),
+            ...((zone.knockoutMatches || {}).nodes || [])
+          ];
+
+          for (const match of matches) {
+            const teams = [
+              (((match.redSide || {}).player || {}).team || null),
+              (((match.blueSide || {}).player || {}).team || null)
+            ];
+
+            for (const team of teams) {
+              if (!team || (!team.collegeName && !team.name)) {
+                continue;
+              }
+              upsertSchool(schools, {
+                collegeName: team.collegeName,
+                teamName: team.name,
+                collegeLogo: team.collegeLogo,
+                teamId: team.id
+              }, {
+                id: zone.id,
+                name: zone.name
+              });
+            }
+          }
+        }
+
+        for (const zone of (state.payloads.ranking || {}).zones || []) {
+          if (state.zoneId && zone.zoneId !== state.zoneId) {
+            continue;
+          }
+
+          for (const group of zone.groups || []) {
+            for (const row of group.groupPlayers || []) {
+              const info = row[1]?.itemValue;
+              if (!info || typeof info !== "object") {
+                continue;
+              }
+              upsertSchool(schools, {
+                collegeName: info.collegeName,
+                teamName: info.teamName,
+                collegeLogo: info.collegeLogo
+              }, {
+                id: zone.zoneId,
+                name: zone.zoneName
+              });
+            }
+          }
+        }
+
+        for (const zone of (state.payloads.robot || {}).zones || []) {
+          if (state.zoneId && zone.zoneId !== state.zoneId) {
+            continue;
+          }
+
+          for (const team of zone.teams || []) {
+            upsertSchool(schools, {
+              collegeName: team.collegeName,
+              teamName: team.name,
+              collegeLogo: team.collegeLogo,
+              teamId: team.id
+            }, {
+              id: zone.zoneId,
+              name: zone.zoneName
+            }, team.robots || []);
+          }
+        }
+
+        return [...schools.values()]
+          .map((school) => ({
+            ...school,
+            zoneIds: [...school.zoneIds],
+            zoneNames: [...school.zoneNames].sort((left, right) => left.localeCompare(right, "zh-CN")),
+            robots: dedupeSchoolRobots(school.robots)
+          }))
+          .sort((left, right) => {
+            const zoneCompare = (left.zoneNames[0] || "").localeCompare(right.zoneNames[0] || "", "zh-CN");
+            if (zoneCompare) {
+              return zoneCompare;
+            }
+            const collegeCompare = left.collegeName.localeCompare(right.collegeName, "zh-CN");
+            if (collegeCompare) {
+              return collegeCompare;
+            }
+            return left.teamName.localeCompare(right.teamName, "zh-CN");
+          });
+      }
+
+      function extractRobotNumber(value) {
+        if (value === null || value === undefined || value === "") {
+          return null;
+        }
+        if (typeof value === "number" && Number.isFinite(value)) {
+          return value;
+        }
+
+        const matched = String(value).match(/\d+/);
+        return matched ? Number(matched[0]) : null;
+      }
+
+      function findSchoolRobot(robots, slot) {
+        return (robots || []).find((robot) => {
+          if (robot.type !== slot.type) {
+            return false;
+          }
+          if (slot.robotNumber === undefined) {
+            return true;
+          }
+
+          const robotNumber = extractRobotNumber(robot.robotNumber);
+          if (robotNumber !== null) {
+            return robotNumber === slot.robotNumber;
+          }
+
+          return String(robot.robotNumber ?? "").trim() === String(slot.robotNumber);
+        }) || null;
+      }
+
+      function renderSchoolRobotSummary(robot, slot) {
+        if (!robot) {
+          return "当前暂无该机器人官方数据。";
+        }
+
+        const config = ROBOT_CONFIG[slot.type];
+        if (!config) {
+          return `官方编号：${escapeHtml(robot.robotNumber ?? "-")}`;
+        }
+
+        return config.columns
+          .map((column) => `${escapeHtml(column.label)}：${formatNumber(robot[column.key], column)}`)
+          .join(" · ");
+      }
+
+      function getSchoolNotesByKey(schoolKey) {
+        const notes = state.schoolNotes[schoolKey];
+        return notes && typeof notes === "object" ? notes : {};
+      }
+
+      function getSchoolImagesByKey(schoolKey) {
+        const images = state.schoolImages[schoolKey];
+        return images && typeof images === "object" ? images : {};
+      }
+
+      function getSchoolSlotImages(schoolKey, slotId) {
+        const images = getSchoolImagesByKey(schoolKey)[slotId];
+        return Array.isArray(images) ? images : [];
+      }
+
+      function setSchoolSlotImages(schoolKey, slotId, imagePaths) {
+        if (!state.schoolImages[schoolKey] || typeof state.schoolImages[schoolKey] !== "object") {
+          state.schoolImages[schoolKey] = {};
+        }
+        const deduped = [];
+        for (const imagePath of imagePaths || []) {
+          const text = String(imagePath || "").trim();
+          if (!text || deduped.includes(text)) {
+            continue;
+          }
+          deduped.push(text);
+        }
+        if (deduped.length || state.staticMode) {
+          state.schoolImages[schoolKey][slotId] = deduped;
+        } else {
+          delete state.schoolImages[schoolKey][slotId];
+        }
+      }
+
+      function normalizeStoredImageUrl(imagePath) {
+        const text = String(imagePath || "").trim();
+        if (!text) {
+          return "";
+        }
+        if (text.startsWith("idb:")) {
+          return state.browserImageDataUrls[text.slice(4)] || "";
+        }
+        return resolveAssetUrl(text);
+      }
+
+      function makeUploadSlotToken(schoolKey, slotId) {
+        return `${schoolKey}::${slotId}`;
+      }
+
+      function readStorageJson(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) {
+            return fallback;
+          }
+          const parsed = JSON.parse(raw);
+          return parsed && typeof parsed === "object" ? parsed : fallback;
+        } catch {
+          return fallback;
+        }
+      }
+
+      function writeStorageJson(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+
+      function mergeNestedMaps(baseValue, overrideValue) {
+        const result = {};
+
+        for (const [schoolKey, slots] of Object.entries(baseValue || {})) {
+          if (!slots || typeof slots !== "object") {
+            continue;
+          }
+          result[schoolKey] = Array.isArray(slots) ? [...slots] : { ...slots };
+        }
+
+        for (const [schoolKey, slots] of Object.entries(overrideValue || {})) {
+          if (!slots || typeof slots !== "object") {
+            continue;
+          }
+          if (!result[schoolKey] || typeof result[schoolKey] !== "object") {
+            result[schoolKey] = {};
+          }
+          for (const [slotId, slotValue] of Object.entries(slots)) {
+            result[schoolKey][slotId] = Array.isArray(slotValue) ? [...slotValue] : slotValue;
+          }
+        }
+
+        return result;
+      }
+
+      function openBrowserImageDb() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(BROWSER_IDB_NAME, 1);
+          request.onerror = () => reject(request.error || new Error("failed to open IndexedDB"));
+          request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(BROWSER_IDB_STORE)) {
+              db.createObjectStore(BROWSER_IDB_STORE);
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+        });
+      }
+
+      async function withBrowserImageStore(mode, handler) {
+        const db = await openBrowserImageDb();
+        try {
+          return await new Promise((resolve, reject) => {
+            const transaction = db.transaction(BROWSER_IDB_STORE, mode);
+            const store = transaction.objectStore(BROWSER_IDB_STORE);
+            Promise.resolve(handler(store, resolve, reject)).catch(reject);
+            transaction.onerror = () => reject(transaction.error || new Error("IndexedDB transaction failed"));
+          });
+        } finally {
+          db.close();
+        }
+      }
+
+      async function idbPutImage(imageId, dataUrl) {
+        await withBrowserImageStore("readwrite", (store, resolve, reject) => {
+          const request = store.put(dataUrl, imageId);
+          request.onerror = () => reject(request.error || new Error("failed to write image"));
+          request.onsuccess = () => resolve(undefined);
+        });
+      }
+
+      async function idbGetImage(imageId) {
+        return withBrowserImageStore("readonly", (store, resolve, reject) => {
+          const request = store.get(imageId);
+          request.onerror = () => reject(request.error || new Error("failed to read image"));
+          request.onsuccess = () => resolve(typeof request.result === "string" ? request.result : "");
+        });
+      }
+
+      async function idbDeleteImage(imageId) {
+        await withBrowserImageStore("readwrite", (store, resolve, reject) => {
+          const request = store.delete(imageId);
+          request.onerror = () => reject(request.error || new Error("failed to delete image"));
+          request.onsuccess = () => resolve(undefined);
+        });
+      }
+
+      async function hydrateBrowserImageDataUrls() {
+        const refs = new Set();
+        for (const slotMap of Object.values(state.schoolImages || {})) {
+          if (!slotMap || typeof slotMap !== "object") {
+            continue;
+          }
+          for (const imagePaths of Object.values(slotMap)) {
+            if (!Array.isArray(imagePaths)) {
+              continue;
+            }
+            for (const imageRef of imagePaths) {
+              const text = String(imageRef || "").trim();
+              if (text.startsWith("idb:")) {
+                refs.add(text.slice(4));
+              }
+            }
+          }
+        }
+
+        for (const imageId of refs) {
+          if (state.browserImageDataUrls[imageId]) {
+            continue;
+          }
+          try {
+            const dataUrl = await idbGetImage(imageId);
+            if (dataUrl) {
+              state.browserImageDataUrls[imageId] = dataUrl;
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      function makeBrowserImageId(schoolKey, slotId) {
+        const token =
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        return `${makeSafeDomId(schoolKey)}-${makeSafeDomId(slotId)}-${token}`;
+      }
+
+      function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(reader.error || new Error("failed to read file"));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadNoteImages(schoolKey, slotId, files) {
+        if (!schoolKey || !slotId || !files.length) {
+          return;
+        }
+
+        const token = makeUploadSlotToken(schoolKey, slotId);
+        state.uploadingSlotKeys.add(token);
+        setSchoolSaveStatus(schoolKey, "图片上传中...", "muted");
+        renderSchoolBoard();
+
+        try {
+          const nextImages = [...getSchoolSlotImages(schoolKey, slotId)];
+          for (const file of files) {
+            if (!file.type.startsWith("image/")) {
+              throw new Error(`文件 ${file.name} 不是图片`);
+            }
+            const dataUrl = await fileToDataUrl(file);
+            if (state.staticMode) {
+              const imageId = makeBrowserImageId(schoolKey, slotId);
+              await idbPutImage(imageId, dataUrl);
+              state.browserImageDataUrls[imageId] = dataUrl;
+              nextImages.push(`idb:${imageId}`);
+            } else {
+              const response = await fetch(NOTE_IMAGE_UPLOAD_API, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  schoolKey,
+                  slotId,
+                  filename: file.name,
+                  dataUrl
+                })
+              });
+              const payload = await response.json().catch(() => ({}));
+              if (!response.ok) {
+                throw new Error(payload.error || `${response.status} ${response.statusText}`);
+              }
+              if (payload.imagePath) {
+                nextImages.push(payload.imagePath);
+              }
+            }
+          }
+
+          setSchoolSlotImages(schoolKey, slotId, nextImages);
+          state.dirtySchoolKeys.add(schoolKey);
+          setSchoolSaveStatus(schoolKey, `图片已上传，等待自动保存（${SCHOOL_AUTO_SAVE_MS / 1000} 秒）。`);
+        } catch (error) {
+          setSchoolSaveStatus(schoolKey, `图片上传失败：${error.message}`, "danger");
+        } finally {
+          state.uploadingSlotKeys.delete(token);
+          renderSchoolBoard();
+        }
+      }
+
+      function renderNoteImages(schoolKey, slotId, fieldLabel) {
+        const imagePaths = getSchoolSlotImages(schoolKey, slotId);
+        const token = makeUploadSlotToken(schoolKey, slotId);
+        const isUploading = state.uploadingSlotKeys.has(token);
+
+        return `
+          <div class="school-note-images">
+            <div class="school-image-grid">
+              ${imagePaths.length
+                ? imagePaths
+                    .map(
+                      (imagePath, index) => `
+                        <div class="school-image-card">
+                          <img
+                            src="${escapeHtml(normalizeStoredImageUrl(imagePath))}"
+                            alt="${escapeHtml(fieldLabel)} 图片 ${index + 1}"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <button
+                            class="school-image-remove"
+                            type="button"
+                            title="移除图片"
+                            data-school-image-remove="true"
+                            data-school-note-key="${escapeHtml(schoolKey)}"
+                            data-school-slot="${escapeHtml(slotId)}"
+                            data-image-index="${index}"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      `
+                    )
+                    .join("")
+                : '<div class="school-image-empty">暂未附图</div>'}
+            </div>
+            <label class="school-image-picker">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                data-school-image-upload="true"
+                data-school-note-key="${escapeHtml(schoolKey)}"
+                data-school-slot="${escapeHtml(slotId)}"
+              />
+              <span>${isUploading ? "上传中..." : "添加图片"}</span>
+            </label>
+            <div class="school-image-hint">${state.staticMode ? "图片会保存在当前浏览器的 IndexedDB 中，刷新或重新打开页面后仍可读取。" : "图片会保存到 data/imgs/，并在重启后重新读取。"}</div>
+          </div>
+        `;
+      }
+
+      function getSchoolNoteFieldLabels() {
+        return Object.fromEntries(
+          [...SCHOOL_ROBOT_SLOTS, SCHOOL_SUMMARY_NOTE].map((item) => [item.id, item.label])
+        );
+      }
+
+      function findSchoolByKey(schoolKey) {
+        return normalizeSchools().find((school) => school.key === schoolKey) || null;
+      }
+
+      function getFilteredSchools(schools) {
+        const pattern = state.schoolSearchPattern.trim();
+        if (!pattern) {
+          state.schoolSearchError = "";
+          return schools;
+        }
+
+        let regex;
+        try {
+          regex = new RegExp(pattern, "i");
+          state.schoolSearchError = "";
+        } catch (error) {
+          state.schoolSearchError = error.message || "无效正则";
+          return schools;
+        }
+
+        return schools.filter((school) => {
+          const haystack = [
+            school.collegeName,
+            school.teamName,
+            ...(school.zoneNames || [])
+          ].join(" ");
+          return regex.test(haystack);
+        });
+      }
+
+      function setSchoolSaveStatus(schoolKey, text, tone = "muted") {
+        if (!schoolKey) {
+          return;
+        }
+        state.schoolSaveByKey[schoolKey] = { text, tone };
+
+        if (schoolKey === state.activeSchoolKey) {
+          const node = refs.schoolDetail.querySelector(".school-save-status");
+          if (node) {
+            node.className = `school-save-status${tone === "muted" ? "" : ` ${tone}`}`;
+            node.textContent = text;
+          }
+        }
+      }
+
+      async function flushDirtySchoolNotes() {
+        const pendingKeys = [...state.dirtySchoolKeys].filter((schoolKey) => !state.savingSchoolKeys.has(schoolKey));
+        for (const schoolKey of pendingKeys) {
+          await saveSchoolNotes(schoolKey, { auto: true });
+        }
+      }
+
+      async function loadSchoolNotes() {
+        if (state.staticMode) {
+          const bootstrapNotes = (STATIC_BOOTSTRAP && STATIC_BOOTSTRAP.notes) || {};
+          const bootstrapImages = (STATIC_BOOTSTRAP && STATIC_BOOTSTRAP.images) || {};
+          const browserNotes = readStorageJson(BROWSER_NOTES_STORAGE_KEY, {});
+          const browserImages = readStorageJson(BROWSER_IMAGES_STORAGE_KEY, {});
+          state.schoolNotes = mergeNestedMaps(bootstrapNotes, browserNotes);
+          state.schoolImages = mergeNestedMaps(bootstrapImages, browserImages);
+          await hydrateBrowserImageDataUrls();
+          state.schoolApiStatus = {
+            text: "当前为 GitHub Pages 静态快照，备注保存在浏览器 LocalStorage，图片保存在 IndexedDB。",
+            tone: "success"
+          };
+          renderSchoolBoard();
+          return;
+        }
+
+        try {
+          const response = await fetch(SCHOOL_NOTES_API, {
+            cache: "no-store"
+          });
+          if (!response.ok) {
+            throw new Error(`${response.status} ${response.statusText}`);
+          }
+
+          const payload = await response.json();
+          if (payload.notes && typeof payload.notes === "object") {
+            state.schoolNotes = payload.notes;
+          }
+          if (payload.images && typeof payload.images === "object") {
+            state.schoolImages = payload.images;
+          }
+          state.schoolApiStatus = {
+            text: payload.csvPath
+              ? `已连接本地服务，保存路径：${payload.csvPath}`
+              : "已连接本地服务，可以保存到 CSV。",
+            tone: "success"
+          };
+          renderSchoolBoard();
+        } catch (error) {
+          console.warn("Failed to load school notes", error);
+          state.schoolApiStatus = {
+            text: "未连接到本地保存服务，请使用 python3 serve_rm_observer.py 打开。",
+            tone: "danger"
+          };
+          renderSchoolBoard();
+        }
+      }
+
+      async function saveSchoolNotes(schoolKey, options = {}) {
+        if (!schoolKey) {
+          return;
+        }
+
+        if (state.staticMode) {
+          try {
+            writeStorageJson(BROWSER_NOTES_STORAGE_KEY, state.schoolNotes);
+            writeStorageJson(BROWSER_IMAGES_STORAGE_KEY, state.schoolImages);
+            state.dirtySchoolKeys.delete(schoolKey);
+            state.schoolSaveByKey[schoolKey] = {
+              text: options.auto ? "已自动保存到浏览器。" : "已保存到浏览器。",
+              tone: "success"
+            };
+            state.schoolApiStatus = {
+              text: "当前为 GitHub Pages 静态快照，备注保存在浏览器 LocalStorage，图片保存在 IndexedDB。",
+              tone: "success"
+            };
+          } catch (error) {
+            state.schoolSaveByKey[schoolKey] = {
+              text: `${options.auto ? "自动保存失败" : "保存失败"}：${error.message}`,
+              tone: "danger"
+            };
+            state.schoolApiStatus = {
+              text: "浏览器本地保存失败，请检查 LocalStorage/IndexedDB 是否可用。",
+              tone: "danger"
+            };
+          }
+          return;
+        }
+
+        if (state.savingSchoolKeys.has(schoolKey)) {
+          return;
+        }
+
+        const school = findSchoolByKey(schoolKey);
+        if (!school) {
+          setSchoolSaveStatus(schoolKey, "保存失败：未找到当前学校数据。", "danger");
+          return;
+        }
+
+        state.savingSchoolKeys.add(schoolKey);
+        setSchoolSaveStatus(schoolKey, options.auto ? "自动保存中..." : "保存中...", "muted");
+
+        try {
+          const response = await fetch(SCHOOL_NOTES_API, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              schoolKey: schoolKey,
+              collegeName: school.collegeName,
+              teamName: school.teamName,
+              zoneNames: school.zoneNames || [],
+              slotLabels: getSchoolNoteFieldLabels(),
+              notes: getSchoolNotesByKey(schoolKey),
+              images: getSchoolImagesByKey(schoolKey)
+            })
+          });
+
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.error || `${response.status} ${response.statusText}`);
+          }
+
+          state.dirtySchoolKeys.delete(schoolKey);
+          state.schoolSaveByKey[schoolKey] = {
+            text: payload.csvPath
+              ? `${options.auto ? "已自动保存到" : "已保存到"} ${payload.csvPath}`
+              : `${options.auto ? "已自动保存到" : "已保存到"} CSV 文件。`,
+            tone: "success"
+          };
+          state.schoolApiStatus = {
+            text: payload.csvPath
+              ? `已连接本地服务，保存路径：${payload.csvPath}`
+              : "已连接本地服务，可以保存到 CSV。",
+            tone: "success"
+          };
+        } catch (error) {
+          state.schoolSaveByKey[schoolKey] = {
+            text: `${options.auto ? "自动保存失败" : "保存失败"}：${error.message}`,
+            tone: "danger"
+          };
+          state.schoolApiStatus = {
+            text: "未连接到本地保存服务，请确认 Python 服务正在运行。",
+            tone: "danger"
+          };
+        } finally {
+          state.savingSchoolKeys.delete(schoolKey);
+        }
+      }
+
+      function deriveMatchTitle(match, groupsById) {
+        if (!match) {
+          return "未命名比赛";
+        }
+
+        if (match.matchType === "KNOCKOUT") {
+          const slug = match.slug || "";
+          return `${match.orderNumber ? `第${match.orderNumber}场-` : ""}${slug}` || `第${match.orderNumber || "-"}场`;
+        }
+
+        if (match.matchType === "GROUP") {
+          const groupName = groupsById.get(match.groupId) || "";
+          const stage = match.slugName ? `第${match.slugName}轮` : "";
+          return `${match.orderNumber ? `第${match.orderNumber}场-` : ""}${groupName ? `${groupName}组` : ""}${stage}` || `第${match.orderNumber || "-"}场`;
+        }
+
+        return `第${match.orderNumber || "-"}场`;
+      }
+
+      function normalizeMatches() {
+        const event = (((state.payloads.schedule || {}).data || {}).event || {});
+        const zones = ((event.zones || {}).nodes || []).filter((zone) => !state.zoneId || zone.id === state.zoneId);
+        const normalized = [];
+
+        for (const zone of zones) {
+          const groupsById = new Map(((zone.groups || {}).nodes || []).map((group) => [group.id, group.name]));
+          const matches = [
+            ...((zone.groupMatches || {}).nodes || []),
+            ...((zone.knockoutMatches || {}).nodes || [])
+          ];
+
+          for (const match of matches) {
+            const redTeam = (((match.redSide || {}).player || {}).team || {});
+            const blueTeam = (((match.blueSide || {}).player || {}).team || {});
+            normalized.push({
+              id: match.id,
+              zoneId: zone.id,
+              zoneName: zone.name,
+              title: deriveMatchTitle(match, groupsById),
+              status: match.status || "UNKNOWN",
+              startedAt: match.planStartedAt,
+              redScore: match.redSideWinGameCount ?? "-",
+              blueScore: match.blueSideWinGameCount ?? "-",
+              redTeam,
+              blueTeam
+            });
+          }
+        }
+
+        return normalized.sort((left, right) => new Date(left.startedAt) - new Date(right.startedAt));
+      }
+
+      function filterScheduleMatches(matches) {
+        const pattern = state.scheduleSearchPattern.trim();
+        if (!pattern) {
+          state.scheduleSearchError = "";
+          return matches;
+        }
+
+        let regex;
+        try {
+          regex = new RegExp(pattern, "i");
+          state.scheduleSearchError = "";
+        } catch (error) {
+          state.scheduleSearchError = error.message || "无效正则";
+          return matches;
+        }
+
+        return matches.filter((match) => {
+          const haystack = [
+            match.title,
+            match.zoneName,
+            match.redTeam.collegeName,
+            match.redTeam.name,
+            match.blueTeam.collegeName,
+            match.blueTeam.name
+          ].join(" ");
+          return regex.test(haystack);
+        });
+      }
+
+      function renderSchedule() {
+        const matches = filterScheduleMatches(normalizeMatches());
+        refs.scheduleMeta.textContent = `${matches.length} 场`;
+        refs.scheduleSearchInput.value = state.scheduleSearchPattern;
+        refs.scheduleSearchStatus.className = `tool-status${state.scheduleSearchError ? " danger" : ""}`;
+        refs.scheduleSearchStatus.textContent = state.scheduleSearchError
+          ? `正则错误：${state.scheduleSearchError}`
+          : state.scheduleSearchPattern.trim()
+            ? `正则匹配到 ${matches.length} 场比赛`
+            : "支持按比赛标题、学校、战队、赛区进行正则搜索。";
+
+        if (!matches.length) {
+          refs.scheduleRoot.innerHTML = '<div class="empty">当前筛选条件下没有赛程数据。</div>';
+          return;
+        }
+
+        refs.scheduleRoot.innerHTML = matches
+          .map((match) => {
+            const statusMeta = SCHEDULE_STATUS[match.status] || {
+              label: match.status || "未知状态",
+              className: "other"
+            };
+
+            return `
+              <article class="match-card">
+                <div class="match-top">
+                  <div>
+                    <h3>${escapeHtml(match.title)}</h3>
+                    <p>${escapeHtml(match.zoneName)} · ${escapeHtml(formatDateTime(match.startedAt))}</p>
+                  </div>
+                  <span class="status-chip ${escapeHtml(statusMeta.className)}">${escapeHtml(statusMeta.label)}</span>
+                </div>
+                <div class="teams">
+                  <div class="team-box red">
+                    ${renderLogoImg(match.redTeam.collegeLogo || defaultLogo, match.redTeam.collegeName || "红方学校", { loading: "lazy" })}
+                    <div class="team-meta">
+                      <span class="school">${escapeHtml(match.redTeam.collegeName || "待定")}</span>
+                      <span class="team">${escapeHtml(match.redTeam.name || "待定")}</span>
+                    </div>
+                  </div>
+                  <div class="score-box">
+                    <div class="score">${escapeHtml(match.redScore)} : ${escapeHtml(match.blueScore)}</div>
+                    <div class="time">${escapeHtml(formatShortTime(match.startedAt))}</div>
+                  </div>
+                  <div class="team-box blue">
+                    ${renderLogoImg(match.blueTeam.collegeLogo || defaultLogo, match.blueTeam.collegeName || "蓝方学校", { loading: "lazy" })}
+                    <div class="team-meta">
+                      <span class="school">${escapeHtml(match.blueTeam.collegeName || "待定")}</span>
+                      <span class="team">${escapeHtml(match.blueTeam.name || "待定")}</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function normalizeRankingZones() {
+        return ((state.payloads.ranking || {}).zones || []).filter((zone) => !state.zoneId || zone.zoneId === state.zoneId);
+      }
+
+      function getRankingGroupOptions(zones) {
+        const groups = new Set();
+        for (const zone of zones) {
+          for (const group of zone.groups || []) {
+            if (group.groupName) {
+              groups.add(group.groupName);
+            }
+          }
+        }
+        return [...groups].sort((left, right) => left.localeCompare(right, "zh-CN"));
+      }
+
+      function renderRankingGroupToolbar(options) {
+        if (state.rankingGroupFilter && !options.includes(state.rankingGroupFilter)) {
+          state.rankingGroupFilter = "";
+        }
+
+        refs.rankingGroupToolbar.innerHTML = [
+          `<button class="filter-btn ${state.rankingGroupFilter ? "" : "active"}" type="button" data-ranking-group="">全部分组</button>`,
+          ...options.map(
+            (groupName) => `
+              <button
+                class="filter-btn ${groupName === state.rankingGroupFilter ? "active" : ""}"
+                type="button"
+                data-ranking-group="${escapeHtml(groupName)}"
+              >
+                ${escapeHtml(groupName)}
+              </button>
+            `
+          )
+        ].join("");
+      }
+
+      function renderRanking() {
+        const zones = normalizeRankingZones();
+        const totalGroupCount = zones.reduce((count, zone) => count + (zone.groups || []).length, 0);
+        const groupOptions = getRankingGroupOptions(zones);
+        renderRankingGroupToolbar(groupOptions);
+        let visibleGroupCount = 0;
+
+        if (!zones.length) {
+          refs.rankingMeta.textContent = "0 个分组";
+          refs.rankingRoot.innerHTML = '<div class="empty">当前筛选条件下没有积分榜数据。</div>';
+          return;
+        }
+
+        const cards = [];
+        for (const zone of zones) {
+          for (const group of zone.groups || []) {
+            if (state.rankingGroupFilter && group.groupName !== state.rankingGroupFilter) {
+              continue;
+            }
+            visibleGroupCount += 1;
+            const rows = group.groupPlayers || [];
+            if (!rows.length) {
+              cards.push(`
+                <article class="group-card">
+                  <h3>${escapeHtml(zone.zoneName)} · ${escapeHtml(group.groupName)}</h3>
+                  <div class="empty">该分组暂无积分榜数据。</div>
+                </article>
+              `);
+              continue;
+            }
+
+            const headers = rows[0].map((cell) => cell.itemName);
+            const body = rows
+              .map((row) => {
+                return `
+                  <tr>
+                    ${row
+                      .map((cell, cellIndex) => {
+                        if (cellIndex === 0) {
+                          return `<td><span class="rank-badge">${escapeHtml(cell.itemValue)}</span></td>`;
+                        }
+                        if (cellIndex === 1 && typeof cell.itemValue === "object" && cell.itemValue) {
+                          const info = cell.itemValue;
+                          return `
+                            <td>
+                              <div class="team-cell">
+                                ${renderLogoImg(info.collegeLogo || defaultLogo, info.collegeName || "学校", { loading: "lazy" })}
+                                <div>
+                                  <span class="school">${escapeHtml(info.collegeName || "-")}</span>
+                                  <span class="team">${escapeHtml(info.teamName || "-")}</span>
+                                </div>
+                              </div>
+                            </td>
+                          `;
+                        }
+                        return `<td>${escapeHtml(cell.itemValue)}</td>`;
+                      })
+                      .join("")}
+                  </tr>
+                `;
+              })
+              .join("");
+
+            cards.push(`
+              <article class="group-card">
+                <h3>${escapeHtml(zone.zoneName)} · ${escapeHtml(group.groupName)}</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+                    </thead>
+                    <tbody>${body}</tbody>
+                  </table>
+                </div>
+              </article>
+            `);
+          }
+        }
+
+        refs.rankingMeta.textContent = `${visibleGroupCount} / ${totalGroupCount} 个分组`;
+
+        if (!cards.length) {
+          refs.rankingRoot.innerHTML = '<div class="empty">当前分组筛选下没有积分榜数据。</div>';
+          return;
+        }
+
+        refs.rankingRoot.innerHTML = cards.join("");
+      }
+
+      function getActiveRobotConfig() {
+        return ROBOT_CONFIG[state.robotType] || ROBOT_CONFIG.Infantry;
+      }
+
+      function sortRobotRows(rows, config) {
+        rows.sort((left, right) => {
+          const direction = config.columns.find((item) => item.key === config.sortKey)?.sortDirection || config.sortDirection;
+          const zeroLast = config.columns.find((item) => item.key === config.sortKey)?.zeroLast;
+          const leftValue = Number(left[config.sortKey] || 0);
+          const rightValue = Number(right[config.sortKey] || 0);
+
+          if (zeroLast) {
+            if (leftValue === 0 && rightValue !== 0) {
+              return 1;
+            }
+            if (rightValue === 0 && leftValue !== 0) {
+              return -1;
+            }
+          }
+
+          if (direction === "asc") {
+            return leftValue - rightValue || left.id - right.id;
+          }
+          return rightValue - leftValue || left.id - right.id;
+        });
+      }
+
+      function normalizeRobotZones() {
+        const zones = ((state.payloads.robot || {}).zones || []).filter((item) => !state.zoneId || item.zoneId === state.zoneId);
+        const config = getActiveRobotConfig();
+
+        return zones.map((zone) => {
+          const rows = [];
+          for (const team of zone.teams || []) {
+            for (const robot of team.robots || []) {
+              if (robot.type !== state.robotType) {
+                continue;
+              }
+              rows.push({
+                ...robot,
+                collegeInfo: {
+                  id: team.id,
+                  collegeName: team.collegeName,
+                  collegeLogo: team.collegeLogo,
+                  teamName: team.name
+                }
+              });
+            }
+          }
+
+          sortRobotRows(rows, config);
+          return { zone, rows };
+        });
+      }
+
+      function renderRobotToolbar() {
+        refs.robotToolbar.innerHTML = Object.entries(ROBOT_CONFIG)
+          .map(
+            ([type, config]) => `
+              <button
+                class="tab-btn ${type === state.robotType ? "active" : ""}"
+                type="button"
+                data-robot-type="${escapeHtml(type)}"
+              >
+                ${escapeHtml(config.label)}
+              </button>
+            `
+          )
+          .join("");
+
+        refs.robotToolbar.querySelectorAll("[data-robot-type]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.robotType = button.dataset.robotType;
+            renderRobotToolbar();
+            renderRobot();
+          });
+        });
+      }
+
+      function renderRobot() {
+        const zoneBundles = normalizeRobotZones();
+        const config = getActiveRobotConfig();
+        const totalRows = zoneBundles.reduce((count, item) => count + item.rows.length, 0);
+        refs.robotMeta.textContent = `${totalRows} 台 ${config.label}`;
+
+        if (!zoneBundles.length) {
+          refs.robotRoot.innerHTML = '<div class="empty">当前筛选条件下没有机器人关键数据。</div>';
+          return;
+        }
+
+        const headers = ["排名", "学校信息", "编号", ...config.columns.map((column) => column.label)];
+        refs.robotRoot.innerHTML = zoneBundles
+          .map(({ zone, rows }) => {
+            if (!rows.length) {
+              return `<div class="empty">${escapeHtml(zone.zoneName)} 当前没有 ${escapeHtml(config.label)} 数据。</div>`;
+            }
+
+            const body = rows
+              .map((row, index) => {
+                return `
+                  <tr>
+                    <td><span class="rank-badge">${index + 1}</span></td>
+                    <td>
+                      <div class="team-cell">
+                        ${renderLogoImg(row.collegeInfo.collegeLogo || defaultLogo, row.collegeInfo.collegeName || "学校", { loading: "lazy" })}
+                        <div>
+                          <span class="school">${escapeHtml(row.collegeInfo.collegeName || "-")}</span>
+                          <span class="team">${escapeHtml(row.collegeInfo.teamName || "-")}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>${escapeHtml(row.robotNumber ?? "-")}</td>
+                    ${config.columns
+                      .map((column) => `<td>${formatNumber(row[column.key], column)}</td>`)
+                      .join("")}
+                  </tr>
+                `;
+              })
+              .join("");
+
+            return `
+              <div class="group-card">
+                <h3>${escapeHtml(zone.zoneName)} · ${escapeHtml(config.label)}</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+                    </thead>
+                    <tbody>${body}</tbody>
+                  </table>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderSchoolBoard() {
+        const schools = normalizeSchools();
+        const filteredSchools = getFilteredSchools(schools);
+        refs.schoolMeta.textContent = `${filteredSchools.length} / ${schools.length} 所学校`;
+        refs.schoolSearchInput.value = state.schoolSearchPattern;
+        refs.schoolSearchStatus.className = `school-search-status${state.schoolSearchError ? " danger" : ""}`;
+        refs.schoolSearchStatus.textContent = state.schoolSearchError
+          ? `正则错误：${state.schoolSearchError}`
+          : state.schoolSearchPattern.trim()
+            ? `正则匹配到 ${filteredSchools.length} 所学校`
+            : "支持按学校、战队、赛区进行正则搜索。";
+
+        if (!schools.length) {
+          state.activeSchoolKey = "";
+          refs.schoolList.innerHTML = '<div class="empty">当前筛选条件下没有学校数据。</div>';
+          refs.schoolDetail.innerHTML = '<div class="empty">请选择其他赛区或等待数据刷新。</div>';
+          return;
+        }
+
+        if (!filteredSchools.length) {
+          refs.schoolList.innerHTML = '<div class="empty">当前正则没有匹配到学校。</div>';
+          refs.schoolDetail.innerHTML = '<div class="empty">请调整搜索表达式后再查看学校详情。</div>';
+          return;
+        }
+
+        if (!filteredSchools.some((school) => school.key === state.activeSchoolKey)) {
+          state.activeSchoolKey = filteredSchools[0].key;
+        }
+
+        refs.schoolList.innerHTML = filteredSchools
+          .map((school) => {
+            return `
+              <button
+                class="school-entry ${school.key === state.activeSchoolKey ? "active" : ""}"
+                type="button"
+                data-school-entry="${escapeHtml(school.key)}"
+              >
+                <div class="school-entry-top">
+                  ${renderLogoImg(school.collegeLogo || defaultLogo, school.collegeName || "学校", { loading: "lazy" })}
+                  <div>
+                    <strong>${escapeHtml(school.collegeName || "未知学校")}</strong>
+                    <span>${escapeHtml(school.teamName || "-")}</span>
+                  </div>
+                </div>
+                <div class="school-entry-zones">${escapeHtml((school.zoneNames || []).join(" / ") || "赛区未标记")}</div>
+              </button>
+            `;
+          })
+          .join("");
+
+        const activeSchool =
+          filteredSchools.find((school) => school.key === state.activeSchoolKey) || filteredSchools[0];
+        const notes = getSchoolNotesByKey(activeSchool.key);
+        const saveStatus = state.schoolSaveByKey[activeSchool.key] || state.schoolApiStatus;
+        const summaryInputId = `school-note-${makeSafeDomId(activeSchool.key)}-${SCHOOL_SUMMARY_NOTE.id}`;
+
+        refs.schoolDetail.innerHTML = `
+          <div class="school-detail-head">
+            ${renderLogoImg(activeSchool.collegeLogo || defaultLogo, activeSchool.collegeName || "学校", { loading: "eager" })}
+            <div>
+              <strong>${escapeHtml(activeSchool.collegeName || "未知学校")}</strong>
+              <span>${escapeHtml(activeSchool.teamName || "-")}</span>
+              <div class="school-detail-meta">
+                ${(activeSchool.zoneNames || []).length
+                  ? activeSchool.zoneNames.map((name) => `<span class="school-meta-chip">${escapeHtml(name)}</span>`).join("")
+                  : '<span class="school-meta-chip">赛区未标记</span>'}
+              </div>
+            </div>
+          </div>
+          <div class="school-slot-grid">
+            ${SCHOOL_ROBOT_SLOTS.map((slot) => {
+              const robot = findSchoolRobot(activeSchool.robots, slot);
+              const inputId = `school-note-${makeSafeDomId(activeSchool.key)}-${slot.id}`;
+              const summary = renderSchoolRobotSummary(robot, slot);
+              const statusText = robot
+                ? `官方编号：${escapeHtml(robot.robotNumber ?? slot.robotNumber ?? slot.label)}`
+                : "暂无官方数据";
+
+              return `
+                <div class="school-slot-card">
+                  <div class="school-slot-title">
+                    <strong>${escapeHtml(slot.label)}</strong>
+                    <span class="school-slot-status">${statusText}</span>
+                  </div>
+                  <div class="school-slot-summary">${summary}</div>
+                  <div class="school-slot-field">
+                    <input
+                      id="${escapeHtml(inputId)}"
+                      type="text"
+                      value="${escapeHtml(notes[slot.id] || "")}"
+                      placeholder="输入备注后点击保存"
+                      data-school-note-key="${escapeHtml(activeSchool.key)}"
+                      data-school-slot="${escapeHtml(slot.id)}"
+                    />
+                  </div>
+                  ${renderNoteImages(activeSchool.key, slot.id, slot.label)}
+                </div>
+              `;
+            }).join("")}
+            <div class="school-slot-card">
+              <div class="school-slot-title">
+                <strong>${escapeHtml(SCHOOL_SUMMARY_NOTE.label)}</strong>
+                <span class="school-slot-status">补充你对整支队伍的总体判断</span>
+              </div>
+              <div class="school-slot-summary">这里可以记录阵容状态、战术倾向、稳定性判断或其他总评信息。</div>
+              <div class="school-slot-field">
+                <label for="${escapeHtml(summaryInputId)}">${escapeHtml(SCHOOL_SUMMARY_NOTE.label)}</label>
+                <textarea
+                  id="${escapeHtml(summaryInputId)}"
+                  placeholder="输入该学校的总体分析"
+                  data-school-note-key="${escapeHtml(activeSchool.key)}"
+                  data-school-slot="${escapeHtml(SCHOOL_SUMMARY_NOTE.id)}"
+                >${escapeHtml(notes[SCHOOL_SUMMARY_NOTE.id] || "")}</textarea>
+              </div>
+              ${renderNoteImages(activeSchool.key, SCHOOL_SUMMARY_NOTE.id, SCHOOL_SUMMARY_NOTE.label)}
+            </div>
+          </div>
+          <div class="school-actions">
+            <button type="button" data-save-school="${escapeHtml(activeSchool.key)}">${state.staticMode ? "保存到浏览器" : "保存修改"}</button>
+            <span class="school-save-status${saveStatus.tone === "muted" ? "" : ` ${escapeHtml(saveStatus.tone)}`}">${escapeHtml(saveStatus.text)}</span>
+          </div>
+        `;
+      }
+
+      function renderMeta() {
+        refs.updatedAt.textContent = state.lastUpdatedAt || "-";
+        refs.healthValue.textContent = state.healthText;
+        refs.healthValue.style.color =
+          state.healthTone === "success" ? "var(--success)" :
+          state.healthTone === "danger" ? "var(--danger)" :
+          "var(--text)";
+      }
+
+      function renderAll() {
+        rebuildZoneSelect();
+        renderMeta();
+        renderActivePanel();
+        renderSchedule();
+        renderRanking();
+        renderRobotToolbar();
+        renderRobot();
+        renderSchoolBoard();
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      }
+
+      async function refreshAll() {
+        state.healthText = "抓取中";
+        state.healthTone = "muted";
+        renderMeta();
+
+        if (state.staticMode && STATIC_BOOTSTRAP && STATIC_BOOTSTRAP.liveData) {
+          state.payloads.schedule = STATIC_BOOTSTRAP.liveData.schedule || null;
+          state.payloads.ranking = STATIC_BOOTSTRAP.liveData.ranking || null;
+          state.payloads.robot = STATIC_BOOTSTRAP.liveData.robot || null;
+          state.lastUpdatedAt = formatDateTime(
+            (STATIC_BOOTSTRAP.liveData && STATIC_BOOTSTRAP.liveData.fetchedAt) ||
+            STATIC_BOOTSTRAP.builtAt ||
+            new Date().toISOString()
+          );
+          state.healthText = "GitHub Pages 静态快照";
+          state.healthTone = "success";
+          renderAll();
+          return;
+        }
+
+        try {
+          const payload = await fetchJson(LIVE_DATA_API);
+          state.payloads.schedule = payload.schedule;
+          state.payloads.ranking = payload.ranking;
+          state.payloads.robot = payload.robot;
+          state.lastUpdatedAt = formatDateTime(payload.fetchedAt || new Date().toISOString());
+          state.healthText = "抓取成功";
+          state.healthTone = "success";
+          renderAll();
+        } catch (error) {
+          console.error(error);
+          state.healthText = `抓取失败：${error.message || "请确认 python3 serve_rm_observer.py 正在运行"}`;
+          state.healthTone = "danger";
+          renderMeta();
+        }
+      }
+
+      function restartTimer() {
+        if (state.staticMode) {
+          if (state.timer) {
+            clearInterval(state.timer);
+            state.timer = null;
+          }
+          return;
+        }
+        if (state.timer) {
+          clearInterval(state.timer);
+        }
+        state.timer = setInterval(refreshAll, state.refreshMs);
+      }
+
+      function restartAutoSaveTimer() {
+        if (state.autoSaveTimer) {
+          clearInterval(state.autoSaveTimer);
+        }
+        state.autoSaveTimer = setInterval(() => {
+          flushDirtySchoolNotes();
+        }, SCHOOL_AUTO_SAVE_MS);
+      }
+
+      refs.zoneSelect.addEventListener("change", (event) => {
+        state.zoneId = event.target.value;
+        renderAll();
+      });
+
+      refs.refreshSelect.addEventListener("change", (event) => {
+        state.refreshMs = Number(event.target.value);
+        restartTimer();
+      });
+
+      refs.timezoneSelect.addEventListener("change", (event) => {
+        state.timezone = event.target.value;
+        renderAll();
+      });
+
+      refs.scheduleSearchInput.addEventListener("input", (event) => {
+        state.scheduleSearchPattern = event.target.value;
+        renderSchedule();
+      });
+
+      refs.schoolSearchInput.addEventListener("input", (event) => {
+        state.schoolSearchPattern = event.target.value;
+        renderSchoolBoard();
+      });
+
+      refs.rankingGroupToolbar.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-ranking-group]");
+        if (!button) {
+          return;
+        }
+
+        state.rankingGroupFilter = button.dataset.rankingGroup;
+        renderRanking();
+      });
+
+      refs.panelTabs.querySelectorAll("[data-panel]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activePanel = button.dataset.panel;
+          renderActivePanel();
+        });
+      });
+
+      refs.schoolList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-school-entry]");
+        if (!button) {
+          return;
+        }
+
+        state.activeSchoolKey = button.dataset.schoolEntry;
+        renderSchoolBoard();
+      });
+
+      refs.schoolDetail.addEventListener("input", (event) => {
+        const input = event.target.closest("[data-school-slot]");
+        if (!input) {
+          return;
+        }
+
+        const schoolKey = input.dataset.schoolNoteKey;
+        const slotId = input.dataset.schoolSlot;
+        if (!schoolKey || !slotId) {
+          return;
+        }
+
+        if (!state.schoolNotes[schoolKey] || typeof state.schoolNotes[schoolKey] !== "object") {
+          state.schoolNotes[schoolKey] = {};
+        }
+
+        state.schoolNotes[schoolKey][slotId] = input.value;
+        state.dirtySchoolKeys.add(schoolKey);
+        setSchoolSaveStatus(schoolKey, `已修改，等待自动保存（${SCHOOL_AUTO_SAVE_MS / 1000} 秒）。`);
+      });
+
+      refs.schoolDetail.addEventListener("change", async (event) => {
+        const input = event.target.closest("[data-school-image-upload]");
+        if (!input) {
+          return;
+        }
+
+        const schoolKey = input.dataset.schoolNoteKey;
+        const slotId = input.dataset.schoolSlot;
+        const files = [...(input.files || [])];
+        input.value = "";
+        await uploadNoteImages(schoolKey, slotId, files);
+      });
+
+      refs.schoolDetail.addEventListener("click", (event) => {
+        const removeButton = event.target.closest("[data-school-image-remove]");
+        if (removeButton) {
+          const schoolKey = removeButton.dataset.schoolNoteKey;
+          const slotId = removeButton.dataset.schoolSlot;
+          const imageIndex = Number(removeButton.dataset.imageIndex);
+          const currentImages = [...getSchoolSlotImages(schoolKey, slotId)];
+          if (Number.isInteger(imageIndex) && imageIndex >= 0 && imageIndex < currentImages.length) {
+            const removedImage = currentImages[imageIndex];
+            currentImages.splice(imageIndex, 1);
+            setSchoolSlotImages(schoolKey, slotId, currentImages);
+            if (state.staticMode && String(removedImage || "").startsWith("idb:")) {
+              const imageId = String(removedImage).slice(4);
+              delete state.browserImageDataUrls[imageId];
+              idbDeleteImage(imageId).catch(() => {});
+            }
+            state.dirtySchoolKeys.add(schoolKey);
+            setSchoolSaveStatus(schoolKey, `图片已移除，等待自动保存（${SCHOOL_AUTO_SAVE_MS / 1000} 秒）。`);
+            renderSchoolBoard();
+          }
+          return;
+        }
+
+        const button = event.target.closest("[data-save-school]");
+        if (!button) {
+          return;
+        }
+
+        saveSchoolNotes(button.dataset.saveSchool);
+      });
+
+      refs.refreshButton.addEventListener("click", () => {
+        refreshAll();
+      });
+
+      loadSchoolNotes();
+      restartTimer();
+      restartAutoSaveTimer();
+      refreshAll();
+    </script>
+  </body>
+</html>
